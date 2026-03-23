@@ -60,6 +60,18 @@ targets:
         UIRequiresFullScreen: false
         MACOSX_DEPLOYMENT_TARGET: "14.0"
 
+  BillManagerTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: BillManagerTests
+    dependencies:
+      - target: BillManager
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.billmanager.app.tests
+        GENERATE_INFOPLIST_FILE: YES
+
 schemes:
   BillManager:
     build:
@@ -69,6 +81,8 @@ schemes:
       config: Debug
     test:
       config: Debug
+      targets:
+        - BillManagerTests
     profile:
       config: Release
     analyze:

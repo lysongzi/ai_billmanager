@@ -17,16 +17,30 @@
 		C5D4DF634B52310153F53510 /* Statistics.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6136E80D7273C57F0BD3C9A4 /* Statistics.swift */; };
 		CA1743EADEDCF51A256C5DC9 /* Category.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9777444F52A32DF2CC392658 /* Category.swift */; };
 		CFA453FF5A8B9183C7511A4C /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD05F45344E2C4446DB26364 /* ContentView.swift */; };
+		EB624D633FA50C8D06ADC5A3 /* ModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4315D58AE55ACB9C444CC456 /* ModelTests.swift */; };
 		F1A006EBF3451FFCFC667D7F /* BillEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0EE3EC71278A397444F28B7 /* BillEditorView.swift */; };
 		F42F613136A12E8EC4187DDA /* Ledger.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7D798584FBBC0EBA643F58ED /* Ledger.swift */; };
+		FB2219B8F853279AE8AB8C3B /* StatisticsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 35D901B0D46A38C57C034E57 /* StatisticsTests.swift */; };
 		FB35AAE259F27FF5F37FF00A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 250B8CBA34342ABE93EAE462 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		EE6F9ED945414CC42546A086 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 04D2EAFCD1AEDC70A096A82A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 2E41F6BFDCBEE3D1210EE6B2;
+			remoteInfo = BillManager;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		0153D91F2F530D2BE763B118 /* BillManagerApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillManagerApp.swift; sourceTree = "<group>"; };
 		0ED76C843CE73F14C396378A /* BillListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillListView.swift; sourceTree = "<group>"; };
 		1596622C6C469C18F7663AEB /* Bill.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Bill.swift; sourceTree = "<group>"; };
 		250B8CBA34342ABE93EAE462 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		35D901B0D46A38C57C034E57 /* StatisticsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsTests.swift; sourceTree = "<group>"; };
+		4315D58AE55ACB9C444CC456 /* ModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelTests.swift; sourceTree = "<group>"; };
 		4F24C513CA8276B3527BBC62 /* StatisticsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StatisticsView.swift; sourceTree = "<group>"; };
 		57C5D1C14C029388D719DAB1 /* LedgerListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LedgerListView.swift; sourceTree = "<group>"; };
 		6136E80D7273C57F0BD3C9A4 /* Statistics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Statistics.swift; sourceTree = "<group>"; };
@@ -35,8 +49,9 @@
 		A0EE3EC71278A397444F28B7 /* BillEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillEditorView.swift; sourceTree = "<group>"; };
 		A9033F2C859038671F1960F5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		C226AF981BC197703F73BAFA /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		C6BBE8E0477BC1F19670FA02 /* BillManager.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = BillManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C6BBE8E0477BC1F19670FA02 /* BillManager.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = BillManager.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		DD05F45344E2C4446DB26364 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		E22F23EC008649285CF25227 /* BillManagerTests.xctest */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.cfbundle; path = BillManagerTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		E23CE2BA7DD92C55890DBC19 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -45,6 +60,7 @@
 			isa = PBXGroup;
 			children = (
 				955575E117987D8E028EAD9D /* BillManager */,
+				851174474A6B503AB29210A9 /* BillManagerTests */,
 				EEA910D83FD2535A8C9908FE /* Products */,
 			);
 			sourceTree = "<group>";
@@ -80,6 +96,15 @@
 			children = (
 			);
 			path = Services;
+			sourceTree = "<group>";
+		};
+		851174474A6B503AB29210A9 /* BillManagerTests */ = {
+			isa = PBXGroup;
+			children = (
+				4315D58AE55ACB9C444CC456 /* ModelTests.swift */,
+				35D901B0D46A38C57C034E57 /* StatisticsTests.swift */,
+			);
+			path = BillManagerTests;
 			sourceTree = "<group>";
 		};
 		89AD7027ABB2DBDEB620A980 /* Models */ = {
@@ -162,6 +187,7 @@
 			isa = PBXGroup;
 			children = (
 				C6BBE8E0477BC1F19670FA02 /* BillManager.app */,
+				E22F23EC008649285CF25227 /* BillManagerTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -195,6 +221,24 @@
 			productReference = C6BBE8E0477BC1F19670FA02 /* BillManager.app */;
 			productType = "com.apple.product-type.application";
 		};
+		635BA58646274F01FD307321 /* BillManagerTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9DB8D12070AC2F92B3B0ADB6 /* Build configuration list for PBXNativeTarget "BillManagerTests" */;
+			buildPhases = (
+				892F7409479014580F7DAE3E /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				A2B4C8AFFEF33B630A07E5F2 /* PBXTargetDependency */,
+			);
+			name = BillManagerTests;
+			packageProductDependencies = (
+			);
+			productName = BillManagerTests;
+			productReference = E22F23EC008649285CF25227 /* BillManagerTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -205,6 +249,9 @@
 				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					2E41F6BFDCBEE3D1210EE6B2 = {
+						DevelopmentTeam = "";
+					};
+					635BA58646274F01FD307321 = {
 						DevelopmentTeam = "";
 					};
 				};
@@ -224,6 +271,7 @@
 			projectRoot = "";
 			targets = (
 				2E41F6BFDCBEE3D1210EE6B2 /* BillManager */,
+				635BA58646274F01FD307321 /* BillManagerTests */,
 			);
 		};
 /* End PBXProject section */
@@ -259,9 +307,43 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		892F7409479014580F7DAE3E /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				EB624D633FA50C8D06ADC5A3 /* ModelTests.swift in Sources */,
+				FB2219B8F853279AE8AB8C3B /* StatisticsTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXTargetDependency section */
+		A2B4C8AFFEF33B630A07E5F2 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 2E41F6BFDCBEE3D1210EE6B2 /* BillManager */;
+			targetProxy = EE6F9ED945414CC42546A086 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
 /* Begin XCBuildConfiguration section */
+		10B2D1FC2A6D8B74B8C69C50 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.billmanager.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BillManager.app/BillManager";
+			};
+			name = Debug;
+		};
 		202F4E3BC12BBBCC45696EC7 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -331,6 +413,23 @@
 				SWIFT_VERSION = 5.9;
 			};
 			name = Debug;
+		};
+		93F8FF97F43217DCBF8085A2 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.billmanager.app.tests;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/BillManager.app/BillManager";
+			};
+			name = Release;
 		};
 		B62C4C7AA3C4A17BD38C08E5 /* Release */ = {
 			isa = XCBuildConfiguration;
@@ -407,7 +506,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.lysongzi.billmanager.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billmanager.app;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -426,7 +525,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = com.lysongzi.billmanager.app;
+				PRODUCT_BUNDLE_IDENTIFIER = com.billmanager.app;
 				SDKROOT = iphoneos;
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -450,6 +549,15 @@
 			buildConfigurations = (
 				202F4E3BC12BBBCC45696EC7 /* Debug */,
 				B62C4C7AA3C4A17BD38C08E5 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		9DB8D12070AC2F92B3B0ADB6 /* Build configuration list for PBXNativeTarget "BillManagerTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				10B2D1FC2A6D8B74B8C69C50 /* Debug */,
+				93F8FF97F43217DCBF8085A2 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
