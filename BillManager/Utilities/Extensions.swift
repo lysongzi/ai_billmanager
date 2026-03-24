@@ -2,6 +2,10 @@ import SwiftUI
 
 extension Color {
     init(hex: String) {
+        self.init(hex)
+    }
+    
+    init(_ hex: String) {
         let hex = hex.trimmingCharacters(in: CharacterSet.alphanumerics.inverted)
         var int: UInt64 = 0
         Scanner(string: hex).scanHexInt64(&int)
@@ -53,7 +57,10 @@ extension Date {
     var startOfWeek: Date {
         let calendar = Calendar.current
         let components = calendar.dateComponents([.yearForWeekOfYear, .weekOfYear], from: self)
-        return calendar.date(from: components) ?? self
+        guard let date = calendar.date(from: components) else { return self }
+        let weekday = calendar.component(.weekday, from: date)
+        let daysToSubtract = (weekday - calendar.firstWeekday + 7) % 7
+        return calendar.date(byAdding: .day, value: -daysToSubtract, to: date) ?? self
     }
 
     var startOfMonth: Date {

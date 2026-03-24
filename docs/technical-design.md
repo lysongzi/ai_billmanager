@@ -469,8 +469,41 @@ struct BillManagerApp: App {
 | MVP | 1.0.0 | 核心功能上线（账本管理、账单CRUD、统计分析） |
 | v1.1 | 1.1.0 | 图表优化，数据导出 |
 | v2.0 | 2.0.0 | 预算管理，周期记账 |
+| v2.1 | 2.1.0 | 5-Tab导航、FAB记账、标签管理（当前版本） |
 
-## 九、总结
+## 九、已实现功能
+
+### 9.1 导航结构（5-Tab）
+
+| Tab | 名称 | 功能 |
+|-----|------|------|
+| Tab 1 | 明细 | Dashboard首页（财务总览+账单列表） |
+| Tab 2 | 图表 | 统计分析（饼图、折线图、分类明细） |
+| Tab 3 | 记账 | FAB快捷记账按钮 |
+| Tab 4 | 发现 | 预算管理、资产概览、智能洞察 |
+| Tab 5 | 我的 | 账本管理、分类管理、标签管理、设置 |
+
+### 9.2 数据模型
+
+```swift
+// 核心模型
+@Model Ledger        // 账本
+@Model Bill          // 账单
+@Model Category      // 分类
+@Model Budget        // 预算（新增）
+@Model Tag           // 标签（新增）
+```
+
+### 9.3 核心页面
+
+- **DashboardView**: 首页，包含账本切换、月份选择、收支概览、快捷操作、账单列表
+- **StatisticsView**: 统计页，类型/时间筛选、饼图、趋势图、分类明细
+- **BudgetView**: 发现页，预算设置与进度、资产概览、洞察提醒
+- **ProfileView**: 我的页面，整合账本/分类/标签管理入口
+- **TagManagementView**: 标签管理，CRUD操作
+- **CategoryManagementView**: 分类管理，支出/收入分类CRUD
+
+## 十、总结
 
 本技术方案基于 SwiftUI + SwiftData 构建，充分利用 Apple 生态系统的原生能力，实现跨 iOS/Mac 平台的记账应用。方案重点关注：
 

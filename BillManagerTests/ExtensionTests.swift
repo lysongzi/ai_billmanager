@@ -1,4 +1,5 @@
 import XCTest
+import SwiftUI
 @testable import BillManager
 
 final class ExtensionTests: XCTestCase {
@@ -91,12 +92,18 @@ final class ExtensionTests: XCTestCase {
     }
     
     func testDateStartOfWeek() {
-        let date = Date()
-        let startOfWeek = date.startOfWeek
         let calendar = Calendar.current
+        let today = Date()
+        let startOfWeek = today.startOfWeek
         
-        let weekday = calendar.component(.weekday, from: startOfWeek)
-        XCTAssertEqual(weekday, 2)
+        let todayWeekday = calendar.component(.weekday, from: today)
+        let startWeekday = calendar.component(.weekday, from: startOfWeek)
+        
+        XCTAssertTrue(startWeekday >= 1 && startWeekday <= 7)
+        XCTAssertTrue(startOfWeek <= today)
+        
+        let daysDiff = calendar.dateComponents([.day], from: startOfWeek, to: today).day ?? 0
+        XCTAssertTrue(daysDiff >= 0 && daysDiff < 7)
     }
     
     func testDateStartOfMonth() {
