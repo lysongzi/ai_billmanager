@@ -81,32 +81,39 @@ struct StatisticsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    ledgerPicker
+        ScrollView {
+            VStack(spacing: 20) {
+                headerSection
+                
+                ledgerPicker
 
-                    timeRangePicker
+                timeRangePicker
 
-                    typeSelector
+                typeSelector
 
-                    summaryCard
+                summaryCard
 
-                    if !categoryStats.isEmpty {
-                        pieChartSection
+                if !categoryStats.isEmpty {
+                    pieChartSection
 
-                        trendChartSection
-
-                        categoryBreakdownSection
-                    } else {
-                        emptyState
-                    }
+                    categoryBreakdownSection
+                } else {
+                    emptyState
                 }
-                .padding()
             }
-            .navigationTitle("统计")
-            .background(Color(.systemGroupedBackground))
+            .padding()
         }
+        .background(Color(red: 250/255, green: 250/255, blue: 249/255))
+    }
+    
+    private var headerSection: some View {
+        HStack {
+            Text("统计")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+            Spacer()
+        }
+        .padding(.top, 60)
     }
 
     private var ledgerPicker: some View {
@@ -142,73 +149,136 @@ struct StatisticsView: View {
 
     private var timeRangePicker: some View {
         HStack(spacing: 8) {
-            ForEach(TimeRange.allCases.filter { $0 != .custom }) { range in
+            ForEach([TimeRange.week, .month, .year], id: \.self) { range in
                 Button {
                     selectedTimeRange = range
                 } label: {
                     Text(range.displayName)
-                        .font(.subheadline)
-                        .fontWeight(selectedTimeRange == range ? .semibold : .regular)
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
+                        .font(.system(size: 14, weight: selectedTimeRange == range ? .semibold : .regular))
+                        .foregroundColor(selectedTimeRange == range ? .white : Color(red: 168/255, green: 162/255, blue: 158/255))
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
                         .background(
                             Capsule()
-                                .fill(selectedTimeRange == range ? Color.accentColor : Color.gray.opacity(0.15))
+                                .fill(selectedTimeRange == range ? Color(red: 245/255, green: 158/255, blue: 11/255) : Color.white)
                         )
-                        .foregroundColor(selectedTimeRange == range ? .white : .primary)
+                        .shadow(color: Color.black.opacity(selectedTimeRange == range ? 0.15 : 0.04), radius: selectedTimeRange == range ? 4 : 2, x: 0, y: 2)
                 }
             }
         }
     }
 
     private var typeSelector: some View {
-        Picker("类型", selection: $selectedBillType) {
-            ForEach(BillType.allCases, id: \.self) { type in
-                Text(type.displayName).tag(type)
+        HStack(spacing: 0) {
+            Button {
+                selectedBillType = .income
+            } label: {
+                Text("收入")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(selectedBillType == .income ? Color(red: 28/255, green: 25/255, blue: 23/255) : Color(red: 168/255, green: 162/255, blue: 158/255))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(selectedBillType == .income ? Color.white : Color.clear)
+                    )
+                    .shadow(color: Color.black.opacity(selectedBillType == .income ? 0.04 : 0), radius: 4, x: 0, y: 2)
+            }
+            
+            Button {
+                selectedBillType = .expense
+            } label: {
+                Text("支出")
+                    .font(.system(size: 14, weight: .medium))
+                    .foregroundColor(selectedBillType == .expense ? Color(red: 28/255, green: 25/255, blue: 23/255) : Color(red: 168/255, green: 162/255, blue: 158/255))
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(
+                        Capsule()
+                            .fill(selectedBillType == .expense ? Color.white : Color.clear)
+                    )
+                    .shadow(color: Color.black.opacity(selectedBillType == .expense ? 0.04 : 0), radius: 4, x: 0, y: 2)
             }
         }
-        .pickerStyle(.segmented)
+        .padding(4)
+        .background(
+            Capsule()
+                .fill(Color(red: 245/255, green: 245/255, blue: 244/255))
+        )
     }
 
     private var summaryCard: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 8) {
+            Rectangle()
+                .fill(
+                    LinearGradient(
+                        colors: [
+                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.3),
+                            Color(red: 244/255, green: 63/255, blue: 94/255).opacity(0.3),
+                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.3)
+                        ],
+                        startPoint: .leading,
+                        endPoint: .trailing
+                    )
+                )
+                .frame(height: 3)
+                .opacity(0.2)
+            
             Text(selectedBillType == .expense ? "总支出" : "总收入")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
+                .font(.system(size: 14, weight: .medium))
+                .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
 
-            Text(totalAmount.currencyFormatted)
-                .font(.system(size: 36, weight: .bold))
-                .foregroundColor(selectedBillType == .expense ? .red : .green)
-
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                Text("¥")
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                Text(totalAmount.currencyFormatted)
+                    .font(.system(size: 36, weight: .bold))
+                    .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+            }
+            
             Text("共 \(filteredBills.count) 笔")
-                .font(.caption)
-                .foregroundColor(.secondary)
+                .font(.system(size: 12))
+                .foregroundColor(Color(red: 120/255, green: 113/255, blue: 108/255))
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
+        .background(Color.white)
+        .cornerRadius(40)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 
     private var pieChartSection: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 16) {
             Text("分类占比")
-                .font(.headline)
-
-            if #available(iOS 17.0, macOS 14.0, *) {
-                Chart(categoryStats) { stat in
-                    SectorMark(
-                        angle: .value("金额", stat.amount),
-                        innerRadius: .ratio(0.5),
-                        angularInset: 1
-                    )
-                    .foregroundStyle(Color(hex: stat.colorHex))
-                    .cornerRadius(4)
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+            
+            ZStack {
+                if #available(iOS 17.0, macOS 14.0, *) {
+                    Chart(categoryStats) { stat in
+                        SectorMark(
+                            angle: .value("金额", stat.amount),
+                            innerRadius: .ratio(0.6),
+                            angularInset: 2
+                        )
+                        .foregroundStyle(Color(hex: stat.colorHex))
+                        .cornerRadius(4)
+                    }
+                    .frame(height: 200)
                 }
-                .frame(height: 200)
+                
+                VStack(spacing: 2) {
+                    Text("总计")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                    Text(totalAmount.currencyFormatted)
+                        .font(.system(size: 18, weight: .bold))
+                        .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+                }
             }
 
-            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 12) {
                 ForEach(categoryStats.prefix(6)) { stat in
                     HStack(spacing: 8) {
                         Circle()
@@ -216,21 +286,22 @@ struct StatisticsView: View {
                             .frame(width: 12, height: 12)
 
                         Text(stat.categoryName)
-                            .font(.caption)
-                            .foregroundColor(.primary)
+                            .font(.system(size: 14))
+                            .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
 
                         Spacer()
 
                         Text(String(format: "%.1f%%", stat.percentage))
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 14, weight: .medium))
+                            .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
                     }
                 }
             }
         }
-        .padding()
-        .background(Color(.systemBackground))
-        .cornerRadius(16)
+        .padding(20)
+        .background(Color.white)
+        .cornerRadius(40)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 
     private var trendChartSection: some View {

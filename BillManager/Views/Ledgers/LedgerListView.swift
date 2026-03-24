@@ -13,72 +13,91 @@ struct LedgerListView: View {
     @State private var ledgerToDelete: Ledger?
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
-                LazyVStack(spacing: 16) {
-                    ForEach(ledgers) { ledger in
-                        if !ledger.isArchived {
-                            NavigationLink(destination: BillListView(ledger: ledger)) {
-                                LedgerCardView(
-                                    ledger: ledger,
-                                    onEdit: { editingLedger = ledger },
-                                    onArchive: { archiveLedger(ledger) },
-                                    onDelete: { confirmDelete(ledger) }
-                                )
-                            }
-                            .buttonStyle(.plain)
+        ScrollView {
+            VStack(spacing: 20) {
+                headerSection
+                
+                ForEach(ledgers) { ledger in
+                    if !ledger.isArchived {
+                        NavigationLink(destination: BillListView(ledger: ledger)) {
+                            LedgerCardView(
+                                ledger: ledger,
+                                onEdit: { editingLedger = ledger },
+                                onArchive: { archiveLedger(ledger) },
+                                onDelete: { confirmDelete(ledger) }
+                            )
                         }
+                        .buttonStyle(.plain)
                     }
+                }
 
-                    if ledgers.filter({ $0.isArchived }).isEmpty == false {
-                        Section {
-                            ForEach(ledgers.filter { $0.isArchived }) { ledger in
-                                ArchivedLedgerRow(
-                                    ledger: ledger,
-                                    onRestore: { restoreLedger(ledger) },
-                                    onDelete: { confirmDelete(ledger) }
-                                )
-                            }
-                        } header: {
-                            HStack {
-                                Image(systemName: "archivebox.fill")
-                                Text("已归档账本")
-                            }
-                            .font(.headline)
-                            .foregroundColor(.secondary)
-                            .padding(.top)
-                        }
-                    }
+                if !ledgers.filter({ $0.isArchived }).isEmpty {
+                    archivedSection
+                }
 
-                    addLedgerButton
-                }
-                .padding()
+                addLedgerButton
             }
-            .navigationTitle("账本")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button {
-                        editingLedger = nil
-                        showingLedgerEditor = true
-                    } label: {
-                        Image(systemName: "plus")
-                    }
-                }
+            .padding()
+        }
+        .background(Color(red: 250/255, green: 250/255, blue: 249/255))
+        .sheet(isPresented: $showingLedgerEditor) {
+            LedgerEditorView(ledger: editingLedger) { name, icon, colorHex in
+                saveLedger(name: name, icon: icon, colorHex: colorHex)
             }
-            .sheet(isPresented: $showingLedgerEditor) {
-                LedgerEditorView(ledger: editingLedger) { name, icon, colorHex in
-                    saveLedger(name: name, icon: icon, colorHex: colorHex)
+        }
+        .alert("确认删除", isPresented: $showingDeleteAlert) {
+            Button("取消", role: .cancel) {}
+            Button("删除", role: .destructive) {
+                if let ledger = ledgerToDelete {
+                    deleteLedger(ledger)
                 }
             }
-            .alert("确认删除", isPresented: $showingDeleteAlert) {
-                Button("取消", role: .cancel) {}
-                Button("删除", role: .destructive) {
-                    if let ledger = ledgerToDelete {
-                        deleteLedger(ledger)
-                    }
-                }
-            } message: {
-                Text("删除账本将同时删除所有相关账单，此操作不可恢复。")
+        } message: {
+            Text("删除账本将同时删除所有相关账单，此操作不可恢复。")
+        }
+    }
+    
+    private var headerSection: some View {
+        HStack {
+            Text("账本")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+            Spacer()
+            
+            Button {
+                editingLedger = nil
+                showingLedgerEditor = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(.white)
+                    .frame(width: 36, height: 36)
+                    .background(
+                        Circle()
+                            .fill(Color(red: 245/255, green: 158/255, blue: 11/255))
+                    )
+            }
+        }
+        .padding(.top, 60)
+    }
+    
+    private var archivedSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: "archivebox.fill")
+                    .font(.system(size: 14))
+                Text("已归档账本")
+                    .font(.system(size: 14, weight: .semibold))
+            }
+            .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+            .padding(.top, 8)
+            
+            ForEach(ledgers.filter { $0.isArchived }) { ledger in
+                ArchivedLedgerRow(
+                    ledger: ledger,
+                    onRestore: { restoreLedger(ledger) },
+                    onDelete: { confirmDelete(ledger) }
+                )
             }
         }
     }
@@ -89,17 +108,17 @@ struct LedgerListView: View {
             showingLedgerEditor = true
         } label: {
             HStack {
-                Image(systemName: "plus.circle.fill")
-                    .font(.title2)
+                Image(systemName: "plus")
+                    .font(.system(size: 18, weight: .semibold))
                 Text("新建账本")
-                    .font(.headline)
+                    .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundColor(.accentColor)
+            .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255))
             .frame(maxWidth: .infinity)
-            .padding()
+            .padding(.vertical, 16)
             .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.accentColor, style: StrokeStyle(lineWidth: 2, dash: [8]))
+                RoundedRectangle(cornerRadius: 40)
+                    .strokeBorder(Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [8]))
             )
         }
     }
@@ -177,23 +196,24 @@ struct LedgerCardView: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack {
                 ZStack {
                     Circle()
-                        .fill(Color(hex: ledger.colorHex).opacity(0.2))
-                        .frame(width: 50, height: 50)
+                        .fill(Color(hex: ledger.colorHex).opacity(0.15))
+                        .frame(width: 56, height: 56)
                     Image(systemName: ledger.icon)
-                        .font(.title2)
+                        .font(.system(size: 24))
                         .foregroundColor(Color(hex: ledger.colorHex))
                 }
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(ledger.name)
-                        .font(.headline)
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
                     Text("\(ledger.bills?.count ?? 0) 笔账单")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12))
+                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
                 }
 
                 Spacer()
@@ -210,56 +230,52 @@ struct LedgerCardView: View {
                         Label("删除", systemImage: "trash")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
-                        .font(.title3)
-                        .foregroundColor(.secondary)
+                    Image(systemName: "ellipsis")
+                        .font(.system(size: 18))
+                        .foregroundColor(Color(red: 120/255, green: 113/255, blue: 108/255))
+                        .frame(width: 44, height: 44)
                 }
             }
 
             Divider()
 
             HStack {
-                VStack(alignment: .leading) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("收入")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
                     Text(ledger.totalIncome.currencyFormatted)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.green)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(red: 16/255, green: 185/255, blue: 129/255))
                 }
 
                 Spacer()
 
-                VStack(alignment: .center) {
+                VStack(alignment: .center, spacing: 4) {
                     Text("支出")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
                     Text(ledger.totalExpense.currencyFormatted)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(.red)
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(Color(red: 244/255, green: 63/255, blue: 94/255))
                 }
 
                 Spacer()
 
-                VStack(alignment: .trailing) {
+                VStack(alignment: .trailing, spacing: 4) {
                     Text("结余")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
                     Text(ledger.balance.currencyFormatted)
-                        .font(.subheadline)
-                        .fontWeight(.medium)
-                        .foregroundColor(ledger.balance >= 0 ? .green : .red)
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundColor(ledger.balance >= 0 ? Color(red: 28/255, green: 25/255, blue: 23/255) : Color(red: 244/255, green: 63/255, blue: 94/255))
                 }
             }
         }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color(.systemBackground))
-                .shadow(color: Color.black.opacity(0.08), radius: 8, x: 0, y: 2)
-        )
+        .padding(24)
+        .background(Color.white)
+        .cornerRadius(40)
+        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
     }
 }
 
