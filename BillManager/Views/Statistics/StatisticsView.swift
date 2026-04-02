@@ -81,39 +81,52 @@ struct StatisticsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                headerSection
-                
-                ledgerPicker
-
-                timeRangePicker
-
-                typeSelector
-
-                summaryCard
-
-                if !categoryStats.isEmpty {
-                    pieChartSection
-
-                    categoryBreakdownSection
-                } else {
-                    emptyState
+        VStack(spacing: 0) {
+            CustomNavBar(
+                title: "统计",
+                rightContent: {
+                    NavBarMenuButton(
+                        icon: currentLedger?.icon ?? "book.fill",
+                        color: Color(hex: "#4ECDC4")
+                    ) {
+                        ForEach(ledgers.filter { !$0.isArchived }) { ledger in
+                            Button {
+                                selectedLedger = ledger
+                                UserDefaults.standard.set(ledger.id.uuidString, forKey: "lastSelectedLedgerId")
+                            } label: {
+                                HStack {
+                                    Image(systemName: ledger.icon)
+                                    Text(ledger.name)
+                                    if ledger.id == currentLedger?.id {
+                                        Image(systemName: "checkmark")
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
+            )
+
+            ScrollView {
+                VStack(spacing: 20) {
+                    timeRangePicker
+
+                    typeSelector
+
+                    summaryCard
+
+                    if !categoryStats.isEmpty {
+                        pieChartSection
+
+                        categoryBreakdownSection
+                    } else {
+                        emptyState
+                    }
+                }
+                .padding()
             }
-            .padding()
         }
-        .background(Color(red: 250/255, green: 250/255, blue: 249/255))
-    }
-    
-    private var headerSection: some View {
-        HStack {
-            Text("统计")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
-            Spacer()
-        }
-        .padding(.top, 60)
+        .background(AppColors.background)
     }
 
     private var ledgerPicker: some View {
@@ -208,22 +221,21 @@ struct StatisticsView: View {
     }
 
     private var summaryCard: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 12) {
             Rectangle()
                 .fill(
                     LinearGradient(
                         colors: [
-                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.3),
-                            Color(red: 244/255, green: 63/255, blue: 94/255).opacity(0.3),
-                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.3)
+                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.6),
+                            Color(red: 244/255, green: 63/255, blue: 94/255).opacity(0.6),
+                            Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.6)
                         ],
                         startPoint: .leading,
                         endPoint: .trailing
                     )
                 )
                 .frame(height: 3)
-                .opacity(0.2)
-            
+
             Text(selectedBillType == .expense ? "总支出" : "总收入")
                 .font(.system(size: 14, weight: .medium))
                 .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
@@ -236,7 +248,7 @@ struct StatisticsView: View {
                     .font(.system(size: 36, weight: .bold))
                     .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
             }
-            
+
             Text("共 \(filteredBills.count) 笔")
                 .font(.system(size: 12))
                 .foregroundColor(Color(red: 120/255, green: 113/255, blue: 108/255))

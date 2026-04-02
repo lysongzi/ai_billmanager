@@ -2,20 +2,27 @@ import SwiftUI
 
 struct BottomNavBar: View {
     @Binding var selectedTab: Int
-    
+
+    private let tabColors: [Color] = [
+        Color(red: 245/255, green: 158/255, blue: 11/255),  // 账本 - 橙色
+        Color(red: 78/255, green: 205/255, blue: 196/255),  // 统计 - 青色
+        Color(red: 155/255, green: 89/255, blue: 182/255)   // 设置 - 紫色
+    ]
+
     private let tabs = [
         (icon: "book.fill", label: "账单"),
         (icon: "chart.pie.fill", label: "统计"),
         (icon: "gearshape.fill", label: "设置")
     ]
-    
+
     var body: some View {
         HStack(spacing: 0) {
             ForEach(0..<tabs.count, id: \.self) { index in
                 NavItem(
                     icon: tabs[index].icon,
                     label: tabs[index].label,
-                    isSelected: selectedTab == index
+                    isSelected: selectedTab == index,
+                    activeColor: tabColors[index]
                 ) {
                     withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                         selectedTab = index
@@ -43,25 +50,26 @@ struct NavItem: View {
     let icon: String
     let label: String
     let isSelected: Bool
+    let activeColor: Color
     let action: () -> Void
-    
+
     var body: some View {
         Button(action: action) {
             VStack(spacing: 4) {
                 ZStack {
                     Image(systemName: icon)
                         .font(.system(size: 22))
-                        .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
+                        .foregroundColor(isSelected ? activeColor : AppColors.textSecondary)
                         .scaleEffect(isSelected ? 1.1 : 1.0)
                 }
                 .frame(height: 24)
-                
+
                 Text(label)
                     .font(.system(size: 10))
-                    .foregroundColor(isSelected ? AppColors.primary : AppColors.textSecondary)
-                
+                    .foregroundColor(isSelected ? activeColor : AppColors.textSecondary)
+
                 Circle()
-                    .fill(AppColors.primary)
+                    .fill(activeColor)
                     .frame(width: 4, height: 4)
                     .scaleEffect(isSelected ? 1 : 0)
                     .opacity(isSelected ? 1 : 0)

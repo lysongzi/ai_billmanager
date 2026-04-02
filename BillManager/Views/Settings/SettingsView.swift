@@ -23,37 +23,29 @@ struct SettingsView: View {
     }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 24) {
-                headerSection
-                
-                ledgerSection
-                
-                generalSection
-                
-                dataSection
-                
-                aboutSection
+        VStack(spacing: 0) {
+            CustomNavBar(title: "设置")
+
+            ScrollView {
+                VStack(spacing: 24) {
+                    ledgerSection
+
+                    generalSection
+
+                    dataSection
+
+                    aboutSection
+                }
+                .padding()
             }
-            .padding()
         }
-        .background(Color(red: 250/255, green: 250/255, blue: 249/255))
+        .background(AppColors.background)
         .sheet(isPresented: $showingLedgerManager) {
             LedgerListView()
         }
         .sheet(isPresented: $showingAbout) {
             AboutView()
         }
-    }
-    
-    private var headerSection: some View {
-        HStack {
-            Text("设置")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
-            Spacer()
-        }
-        .padding(.top, 60)
     }
 
     private var ledgerSection: some View {

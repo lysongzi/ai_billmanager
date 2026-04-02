@@ -7,10 +7,12 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            LedgerListView()
-                .tabItem {
-                    Label("账本", systemImage: "book.fill")
-                }
+            NavigationStack {
+                LedgerListView()
+            }
+            .tabItem {
+                Label("账本", systemImage: "book.fill")
+            }
 
             StatisticsView()
                 .tabItem {

@@ -13,33 +13,46 @@ struct LedgerListView: View {
     @State private var ledgerToDelete: Ledger?
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                headerSection
-                
-                ForEach(ledgers) { ledger in
-                    if !ledger.isArchived {
-                        NavigationLink(destination: BillListView(ledger: ledger)) {
-                            LedgerCardView(
-                                ledger: ledger,
-                                onEdit: { editingLedger = ledger },
-                                onArchive: { archiveLedger(ledger) },
-                                onDelete: { confirmDelete(ledger) }
-                            )
-                        }
-                        .buttonStyle(.plain)
+        VStack(spacing: 0) {
+            CustomNavBar(
+                title: "账本",
+                rightContent: {
+                    NavBarButton(icon: "plus", color: AppColors.primary) {
+                        editingLedger = nil
+                        showingLedgerEditor = true
                     }
                 }
+            )
 
-                if !ledgers.filter({ $0.isArchived }).isEmpty {
-                    archivedSection
+            ScrollView {
+                VStack(spacing: 20) {
+                    ForEach(ledgers) { ledger in
+                        if !ledger.isArchived {
+                            NavigationLink(value: ledger) {
+                                LedgerCardView(
+                                    ledger: ledger,
+                                    onEdit: { editingLedger = ledger },
+                                    onArchive: { archiveLedger(ledger) },
+                                    onDelete: { confirmDelete(ledger) }
+                                )
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+
+                    if !ledgers.filter({ $0.isArchived }).isEmpty {
+                        archivedSection
+                    }
+
+                    addLedgerButton
                 }
-
-                addLedgerButton
+                .padding()
             }
-            .padding()
         }
-        .background(Color(red: 250/255, green: 250/255, blue: 249/255))
+        .background(AppColors.background)
+        .navigationDestination(for: Ledger.self) { selectedLedger in
+            BillListView(ledger: selectedLedger)
+        }
         .sheet(isPresented: $showingLedgerEditor) {
             LedgerEditorView(ledger: editingLedger) { name, icon, colorHex in
                 saveLedger(name: name, icon: icon, colorHex: colorHex)
@@ -55,30 +68,6 @@ struct LedgerListView: View {
         } message: {
             Text("删除账本将同时删除所有相关账单，此操作不可恢复。")
         }
-    }
-    
-    private var headerSection: some View {
-        HStack {
-            Text("账本")
-                .font(.system(size: 28, weight: .bold))
-                .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
-            Spacer()
-            
-            Button {
-                editingLedger = nil
-                showingLedgerEditor = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.system(size: 18, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(width: 36, height: 36)
-                    .background(
-                        Circle()
-                            .fill(Color(red: 245/255, green: 158/255, blue: 11/255))
-                    )
-            }
-        }
-        .padding(.top, 60)
     }
     
     private var archivedSection: some View {
@@ -359,6 +348,7 @@ struct LedgerEditorView: View {
                                     )
                                     .foregroundColor(selectedIcon == icon ? .accentColor : .primary)
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
@@ -377,6 +367,7 @@ struct LedgerEditorView: View {
                                             .strokeBorder(selectedColor == color ? Color.primary : Color.clear, lineWidth: 3)
                                     )
                             }
+                            .buttonStyle(.plain)
                         }
                     }
                 }
