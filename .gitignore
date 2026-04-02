@@ -1,1 +1,4 @@
 ui_design_prototype/
+.DS_Store
+*.xcuserstate
+*.xcuserdatad
