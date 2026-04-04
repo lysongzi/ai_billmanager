@@ -2,38 +2,29 @@ import SwiftUI
 import SwiftData
 
 struct BillListView: View {
-    @Environment(\.modelContext) private var modelContext
     @Bindable var ledger: Ledger
+    @Environment(\.modelContext) private var modelContext
 
+    @State private var viewModel: BillListViewModel?
     @State private var showingBillEditor = false
     @State private var editingBill: Bill?
-    @State private var showingQuickAdd = false
     @State private var selectedBillType: BillType = .expense
     @State private var searchText = ""
 
-    var bills: [Bill] {
-        let allBills = ledger.bills ?? []
-        if searchText.isEmpty {
-            return allBills.sorted { $0.date > $1.date }
-        }
-        return allBills.filter {
-            $0.categoryName.localizedCaseInsensitiveContains(searchText) ||
-            ($0.note?.localizedCaseInsensitiveContains(searchText) ?? false)
-        }.sorted { $0.date > $1.date }
-    }
-
-    var groupedBills: [(date: Date, bills: [Bill])] {
-        bills.groupedByDate()
-    }
-
     var body: some View {
         VStack(spacing: 0) {
-            summaryHeader
+            if let vm = viewModel {
+                summaryHeader(vm: vm)
 
-            if bills.isEmpty {
-                emptyState
+                if vm.bills.isEmpty && !vm.isLoading {
+                    emptyState
+                } else {
+                    billsList(vm: vm)
+                }
             } else {
-                billsList
+                Spacer()
+                ProgressView()
+                Spacer()
             }
         }
         .navigationTitle(ledger.name)
@@ -55,12 +46,6 @@ struct BillListView: View {
                     } label: {
                         Label("记收入", systemImage: "arrow.down.circle")
                     }
-                    Divider()
-                    Button {
-                        showingQuickAdd = true
-                    } label: {
-                        Label("快捷记账", systemImage: "bolt.fill")
-                    }
                 } label: {
                     Image(systemName: "plus")
                 }
@@ -70,30 +55,40 @@ struct BillListView: View {
             BillEditorView(
                 ledger: ledger,
                 bill: editingBill,
-                preSelectedType: selectedBillType
-            ) { bill in
-                saveBill(bill)
-            }
-        }
-        .sheet(isPresented: $showingQuickAdd) {
-            QuickAddView(ledger: ledger) { bill in
-                saveBill(bill)
+                preSelectedType: selectedBillType,
+                modelContext: modelContext
+            ) {
+                Task { await viewModel?.loadBills() }
             }
         }
         .searchable(text: $searchText, prompt: "搜索账单")
+        .onChange(of: searchText) { _, keyword in
+            Task { await viewModel?.searchBills(keyword: keyword) }
+        }
+        .task {
+            // Build ViewModel from modelContext
+            if viewModel == nil {
+                let billRepo = BillRepository(modelContext: modelContext)
+                let billService = BillService(billRepository: billRepo)
+                let vm = BillListViewModel(billService: billService)
+                vm.selectedLedger = ledger
+                viewModel = vm
+            }
+            await viewModel?.loadBills()
+        }
     }
 
-    private var summaryHeader: some View {
+    private func summaryHeader(vm: BillListViewModel) -> some View {
         VStack(spacing: 12) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("收入")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(totalIncome.currencyFormatted)
+                    Text(vm.totalIncome.currencyFormatted)
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(.green)
+                        .foregroundColor(AppColors.income)
                 }
 
                 Spacer()
@@ -102,10 +97,10 @@ struct BillListView: View {
                     Text("支出")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(totalExpense.currencyFormatted)
+                    Text(vm.totalExpense.currencyFormatted)
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(.red)
+                        .foregroundColor(AppColors.expense)
                 }
 
                 Spacer()
@@ -114,10 +109,10 @@ struct BillListView: View {
                     Text("结余")
                         .font(.caption)
                         .foregroundColor(.secondary)
-                    Text(balance.currencyFormatted)
+                    Text(vm.balance.currencyFormatted)
                         .font(.title3)
                         .fontWeight(.semibold)
-                        .foregroundColor(balance >= 0 ? .green : .red)
+                        .foregroundColor(vm.balance >= 0 ? AppColors.income : AppColors.expense)
                 }
             }
             .padding(.horizontal)
@@ -142,9 +137,9 @@ struct BillListView: View {
         }
     }
 
-    private var billsList: some View {
+    private func billsList(vm: BillListViewModel) -> some View {
         List {
-            ForEach(groupedBills, id: \.date) { group in
+            ForEach(vm.groupedBills, id: \.date) { group in
                 Section {
                     ForEach(group.bills) { bill in
                         BillRowView(bill: bill)
@@ -155,7 +150,7 @@ struct BillListView: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button(role: .destructive) {
-                                    deleteBill(bill)
+                                    Task { await vm.deleteBill(bill) }
                                 } label: {
                                     Label("删除", systemImage: "trash")
                                 }
@@ -177,48 +172,14 @@ struct BillListView: View {
         .listStyle(.insetGrouped)
     }
 
-    private var totalIncome: Double {
-        bills.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
-    }
-
-    private var totalExpense: Double {
-        bills.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
-    }
-
-    private var balance: Double {
-        totalIncome - totalExpense
-    }
-
     private func dailyTotal(for bills: [Bill]) -> Double {
         let income = bills.filter { $0.type == .income }.reduce(0) { $0 + $1.amount }
         let expense = bills.filter { $0.type == .expense }.reduce(0) { $0 + $1.amount }
         return income - expense
     }
-
-    private func saveBill(_ bill: Bill) {
-        if let editingBill = editingBill {
-            editingBill.amount = bill.amount
-            editingBill.type = bill.type
-            editingBill.categoryName = bill.categoryName
-            editingBill.categoryIcon = bill.categoryIcon
-            editingBill.categoryColorHex = bill.categoryColorHex
-            editingBill.note = bill.note
-            editingBill.date = bill.date
-            editingBill.updatedAt = Date()
-        } else {
-            if ledger.bills == nil {
-                ledger.bills = []
-            }
-            ledger.bills?.append(bill)
-        }
-        try? modelContext.save()
-    }
-
-    private func deleteBill(_ bill: Bill) {
-        modelContext.delete(bill)
-        try? modelContext.save()
-    }
 }
+
+// MARK: - BillRowView
 
 struct BillRowView: View {
     let bill: Bill
@@ -251,15 +212,17 @@ struct BillRowView: View {
             Text((bill.type == .expense ? "-" : "+") + bill.amount.currencyFormatted)
                 .font(.body)
                 .fontWeight(.medium)
-                .foregroundColor(bill.type == .expense ? .red : .green)
+                .foregroundColor(bill.type == .expense ? AppColors.expense : AppColors.income)
         }
         .padding(.vertical, 4)
     }
 }
 
 #Preview {
+    let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let ctx = container.mainContext
     NavigationStack {
         BillListView(ledger: Ledger(name: "测试账本"))
     }
-    .modelContainer(for: [Ledger.self, Bill.self, Category.self], inMemory: true)
+    .modelContainer(container)
 }

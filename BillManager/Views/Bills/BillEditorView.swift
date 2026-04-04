@@ -3,12 +3,12 @@ import SwiftData
 
 struct BillEditorView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
 
     let ledger: Ledger
     let bill: Bill?
     let preSelectedType: BillType
-    let onSave: (Bill) -> Void
+    let modelContext: ModelContext
+    let onSaved: () -> Void
 
     @State private var amount: String = ""
     @State private var selectedType: BillType
@@ -20,11 +20,12 @@ struct BillEditorView: View {
         ledger.categories?.filter { $0.type == selectedType } ?? []
     }
 
-    init(ledger: Ledger, bill: Bill?, preSelectedType: BillType, onSave: @escaping (Bill) -> Void) {
+    init(ledger: Ledger, bill: Bill?, preSelectedType: BillType, modelContext: ModelContext, onSaved: @escaping () -> Void) {
         self.ledger = ledger
         self.bill = bill
         self.preSelectedType = preSelectedType
-        self.onSave = onSave
+        self.modelContext = modelContext
+        self.onSaved = onSaved
 
         _selectedType = State(initialValue: bill?.type ?? preSelectedType)
 
@@ -115,23 +116,41 @@ struct BillEditorView: View {
         guard let amountValue = Double(amount),
               let category = selectedCategory else { return }
 
-        let newBill = Bill(
-            id: bill?.id ?? UUID(),
-            amount: amountValue,
-            type: selectedType,
-            categoryName: category.name,
-            categoryIcon: category.icon,
-            categoryColorHex: category.colorHex,
-            note: note.isEmpty ? nil : note,
-            date: date,
-            createdAt: bill?.createdAt ?? Date(),
-            updatedAt: Date()
-        )
+        let billService = BillService(billRepository: BillRepository(modelContext: modelContext))
 
-        onSave(newBill)
-        dismiss()
+        do {
+            if let existingBill = bill {
+                try billService.updateBill(
+                    existingBill,
+                    amount: amountValue,
+                    type: selectedType,
+                    categoryName: category.name,
+                    categoryIcon: category.icon,
+                    categoryColorHex: category.colorHex,
+                    note: note.isEmpty ? nil : note,
+                    date: date
+                )
+            } else {
+                try billService.createBill(
+                    amount: amountValue,
+                    type: selectedType,
+                    categoryName: category.name,
+                    categoryIcon: category.icon,
+                    categoryColorHex: category.colorHex,
+                    note: note.isEmpty ? nil : note,
+                    date: date,
+                    ledger: ledger
+                )
+            }
+            onSaved()
+            dismiss()
+        } catch {
+            print("保存账单失败: \(error)")
+        }
     }
 }
+
+// MARK: - CategoryButton
 
 struct CategoryButton: View {
     let category: Category
@@ -156,7 +175,7 @@ struct CategoryButton: View {
 
                 Text(category.name)
                     .font(.caption2)
-                    .foregroundColor(isSelected ? .primary : .secondary)
+                    .foregroundColor(isSelected ? AppColors.textPrimary : AppColors.textSecondary)
                     .lineLimit(1)
             }
         }
@@ -164,168 +183,14 @@ struct CategoryButton: View {
     }
 }
 
-struct QuickAddView: View {
-    @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-
-    let ledger: Ledger
-    let onSave: (Bill) -> Void
-
-    @State private var amount: String = ""
-    @State private var selectedType: BillType = .expense
-    @State private var selectedCategory: Category?
-
-    private var categories: [Category] {
-        ledger.categories?.filter { $0.type == selectedType } ?? []
-    }
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                amountDisplay
-
-                typeSelector
-
-                categoryGrid
-
-                Spacer()
-
-                saveButton
-            }
-            .navigationTitle("快捷记账")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("取消") { dismiss() }
-                }
-            }
-            .onAppear {
-                selectedCategory = categories.first
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private var amountDisplay: some View {
-        VStack {
-            Text(selectedType == .expense ? "支出" : "收入")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                Text("¥")
-                    .font(.system(size: 36, weight: .medium))
-                    .foregroundColor(.secondary)
-
-                TextField("0", text: $amount)
-                    .font(.system(size: 56, weight: .bold))
-                    .keyboardType(.decimalPad)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-            }
-        }
-        .padding(.vertical, 24)
-    }
-
-    private var typeSelector: some View {
-        HStack(spacing: 20) {
-            ForEach(BillType.allCases, id: \.self) { type in
-                Button {
-                    selectedType = type
-                    selectedCategory = categories.first
-                } label: {
-                    HStack {
-                        Image(systemName: type.icon)
-                        Text(type.displayName)
-                    }
-                    .font(.headline)
-                    .foregroundColor(selectedType == type ? (type == .expense ? .white : .white) : .primary)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 10)
-                    .background(
-                        Capsule()
-                            .fill(selectedType == type ? (type == .expense ? Color.red : Color.green) : Color.gray.opacity(0.15))
-                    )
-                }
-            }
-        }
-        .padding(.horizontal)
-        .padding(.bottom, 16)
-    }
-
-    private var categoryGrid: some View {
-        ScrollView {
-            LazyVGrid(columns: Array(repeating: GridItem(.flexible()), count: 4), spacing: 16) {
-                ForEach(categories) { category in
-                    Button {
-                        selectedCategory = category
-                    } label: {
-                        VStack(spacing: 6) {
-                            ZStack {
-                                Circle()
-                                    .fill(Color(hex: category.colorHex).opacity(selectedCategory?.id == category.id ? 0.3 : 0.15))
-                                    .frame(width: 50, height: 50)
-                                Image(systemName: category.icon)
-                                    .font(.system(size: 20))
-                                    .foregroundColor(Color(hex: category.colorHex))
-                            }
-
-                            Text(category.name)
-                                .font(.caption)
-                                .foregroundColor(.primary)
-                        }
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal)
-        }
-    }
-
-    private var saveButton: some View {
-        Button {
-            saveBill()
-        } label: {
-            Text("保存")
-                .font(.headline)
-                .foregroundColor(.white)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 16)
-                .background(isValid ? Color.accentColor : Color.gray)
-                .cornerRadius(12)
-        }
-        .disabled(!isValid)
-        .padding()
-    }
-
-    private var isValid: Bool {
-        guard let amountValue = Double(amount), amountValue > 0 else { return false }
-        return selectedCategory != nil
-    }
-
-    private func saveBill() {
-        guard let amountValue = Double(amount),
-              let category = selectedCategory else { return }
-
-        let bill = Bill(
-            amount: amountValue,
-            type: selectedType,
-            categoryName: category.name,
-            categoryIcon: category.icon,
-            categoryColorHex: category.colorHex,
-            date: Date()
-        )
-
-        onSave(bill)
-        dismiss()
-    }
-}
-
 #Preview {
+    let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let ctx = container.mainContext
     BillEditorView(
         ledger: Ledger(name: "测试账本"),
         bill: nil,
-        preSelectedType: .expense
-    ) { _ in }
-    .modelContainer(for: [Ledger.self, Bill.self, Category.self], inMemory: true)
+        preSelectedType: .expense,
+        modelContext: ctx
+    ) {}
+    .modelContainer(container)
 }

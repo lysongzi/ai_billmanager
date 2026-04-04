@@ -108,7 +108,9 @@ enum TimeRange: String, CaseIterable, Identifiable {
             return (start, end)
         case .year:
             let start = calendar.date(from: calendar.dateComponents([.year], from: now))!
-            let end = calendar.date(byAdding: DateComponents(month: 11, day: 31), to: start)!
+            // Bug fix: 使用年末最后一天，避免 month:11 day:31 导致跨年问题
+            let nextYearStart = calendar.date(byAdding: .year, value: 1, to: start)!
+            let end = calendar.date(byAdding: .day, value: -1, to: nextYearStart)!
             return (start, end)
         case .custom:
             return (now, now)

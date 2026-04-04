@@ -1,47 +1,32 @@
 import SwiftUI
+import SwiftData
 
 struct AddRecordView: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(\.modelContext) private var modelContext
-    
-    let ledger: Ledger?
-    let onSave: (Bill) -> Void
-    
-    @State private var amount: String = ""
-    @State private var billType: BillType = .expense
-    @State private var selectedCategory: Category?
-    @State private var note: String = ""
-    @State private var date: Date = Date()
-    
-    private var categories: [Category] {
-        ledger?.categories?.filter { $0.type == billType } ?? []
-    }
-    
-    private var canSave: Bool {
-        guard let amountVal = Double(amount), amountVal > 0 else { return false }
-        return selectedCategory != nil
-    }
-    
+
+    @State var viewModel: AddRecordViewModel
+    let currentLedger: Ledger?
+
     var body: some View {
         NavigationStack {
             ZStack {
-                Color(AppColors.background)
+                AppColors.background
                     .ignoresSafeArea()
-                
+
                 ScrollView {
                     VStack(spacing: 24) {
                         amountSection
-                        
+
                         typeToggleSection
-                        
+
                         categorySection
-                        
+
                         dateTimeSection
-                        
+
                         noteSection
                     }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
+                    .padding(.horizontal, AppSpacing.spacing5)
+                    .padding(.top, AppSpacing.spacing5)
                     .padding(.bottom, 40)
                 }
             }
@@ -52,45 +37,58 @@ struct AddRecordView: View {
                     Button("取消") { dismiss() }
                         .foregroundColor(AppColors.textSecondary)
                 }
-                
+
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("保存") { saveBill() }
-                        .foregroundColor(canSave ? AppColors.primary : AppColors.textTertiary)
-                        .disabled(!canSave)
+                    Button("保存") {
+                        guard let ledger = currentLedger else { return }
+                        Task {
+                            await viewModel.save(to: ledger)
+                        }
+                    }
+                    .foregroundColor(viewModel.canSave ? AppColors.primary : AppColors.textTertiary)
+                    .disabled(!viewModel.canSave)
                 }
             }
             .onAppear {
-                if selectedCategory == nil, let first = categories.first {
-                    selectedCategory = first
+                if let ledger = currentLedger {
+                    Task { await viewModel.loadCategories(for: ledger) }
+                }
+            }
+            .onChange(of: viewModel.isSaved) { _, saved in
+                if saved { dismiss() }
+            }
+            .onChange(of: viewModel.selectedType) { _, _ in
+                if let ledger = currentLedger {
+                    Task { await viewModel.reloadCategories(for: ledger) }
                 }
             }
         }
     }
-    
+
     private var amountSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("金额")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppColors.textSecondary)
                 .padding(.leading, 8)
-            
+
             VStack(spacing: 4) {
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text("¥")
                         .font(.system(size: 28, weight: .medium))
                         .foregroundColor(AppColors.textSecondary)
-                    
-                    TextField("0.00", text: $amount)
+
+                    TextField("0.00", text: $viewModel.amount)
                         .font(.system(size: 44, weight: .semibold))
                         .foregroundColor(AppColors.textPrimary)
                         .keyboardType(.decimalPad)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .padding(20)
+            .padding(AppSpacing.spacing5)
             .background(
                 RoundedRectangle(cornerRadius: AppCornerRadius.extraLarge)
-                    .fill(Color.white)
+                    .fill(AppColors.cardBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: AppCornerRadius.extraLarge)
@@ -99,14 +97,13 @@ struct AddRecordView: View {
             )
         }
     }
-    
+
     private var typeToggleSection: some View {
         HStack(spacing: 8) {
             ForEach([BillType.income, .expense], id: \.self) { type in
                 Button {
                     withAnimation(.spring(response: 0.3)) {
-                        billType = type
-                        selectedCategory = categories.first
+                        viewModel.selectedType = type
                     }
                 } label: {
                     Text(type.displayName)
@@ -115,110 +112,111 @@ struct AddRecordView: View {
                         .padding(.vertical, 12)
                         .background(
                             RoundedRectangle(cornerRadius: 24)
-                                .fill(billType == type ? Color(AppColors.textPrimary) : Color.white)
+                                .fill(viewModel.selectedType == type ? AppColors.textPrimary : AppColors.cardBackground)
                         )
-                        .foregroundColor(billType == type ? .white : AppColors.textSecondary)
+                        .foregroundColor(viewModel.selectedType == type ? .white : AppColors.textSecondary)
                 }
             }
         }
         .padding(4)
         .background(
             RoundedRectangle(cornerRadius: 28)
-                .fill(Color(AppColors.backgroundAlt))
+                .fill(AppColors.backgroundAlt)
         )
     }
-    
+
     private var categorySection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("分类")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppColors.textSecondary)
                 .padding(.leading, 8)
-            
+
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12), count: 4), spacing: 16) {
-                ForEach(categories) { category in
+                ForEach(viewModel.categories) { category in
                     Button {
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                            selectedCategory = category
+                            viewModel.selectedCategory = category
                         }
                     } label: {
                         VStack(spacing: 6) {
                             ZStack {
                                 RoundedRectangle(cornerRadius: AppCornerRadius.medium)
-                                    .fill(Color(category.colorHex).opacity(0.15))
+                                    .fill(Color(hex: category.colorHex).opacity(0.15))
                                     .frame(width: 52, height: 52)
-                                
+
                                 Image(systemName: category.icon)
                                     .font(.system(size: 20))
-                                    .foregroundColor(Color(category.colorHex))
+                                    .foregroundColor(Color(hex: category.colorHex))
                             }
                             .overlay(
                                 RoundedRectangle(cornerRadius: AppCornerRadius.medium)
                                     .stroke(
-                                        selectedCategory?.id == category.id ? AppColors.textPrimary : Color.clear,
+                                        viewModel.selectedCategory?.id == category.id ? AppColors.textPrimary : Color.clear,
                                         lineWidth: 2
                                     )
                             )
-                            .scaleEffect(selectedCategory?.id == category.id ? 1.1 : 1.0)
-                            
+                            .scaleEffect(viewModel.selectedCategory?.id == category.id ? 1.1 : 1.0)
+
                             Text(category.name)
                                 .font(.system(size: 11))
-                                .foregroundColor(selectedCategory?.id == category.id ? AppColors.textPrimary : AppColors.textSecondary)
+                                .foregroundColor(viewModel.selectedCategory?.id == category.id ? AppColors.textPrimary : AppColors.textSecondary)
                         }
                     }
+                    .buttonStyle(.plain)
                 }
             }
-            .padding(20)
+            .padding(AppSpacing.spacing5)
             .background(
                 RoundedRectangle(cornerRadius: AppCornerRadius.extraLarge)
-                    .fill(Color.white)
+                    .fill(AppColors.cardBackground)
             )
         }
     }
-    
+
     private var dateTimeSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("日期与时间")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppColors.textSecondary)
                 .padding(.leading, 8)
-            
+
             HStack(spacing: 12) {
-                DatePicker("", selection: $date, displayedComponents: .date)
+                DatePicker("", selection: $viewModel.selectedDate, displayedComponents: .date)
                     .labelsHidden()
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, AppSpacing.spacing4)
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                            .fill(Color(AppColors.backgroundAlt))
+                            .fill(AppColors.backgroundAlt)
                     )
-                
-                DatePicker("", selection: $date, displayedComponents: .hourAndMinute)
+
+                DatePicker("", selection: $viewModel.selectedDate, displayedComponents: .hourAndMinute)
                     .labelsHidden()
-                    .padding(.horizontal, 16)
+                    .padding(.horizontal, AppSpacing.spacing4)
                     .padding(.vertical, 12)
                     .background(
                         RoundedRectangle(cornerRadius: AppCornerRadius.large)
-                            .fill(Color(AppColors.backgroundAlt))
+                            .fill(AppColors.backgroundAlt)
                     )
             }
         }
     }
-    
+
     private var noteSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("备注")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundColor(AppColors.textSecondary)
                 .padding(.leading, 8)
-            
-            TextEditor(text: $note)
+
+            TextEditor(text: $viewModel.note)
                 .font(.system(size: 14))
                 .frame(height: 100)
-                .padding(16)
+                .padding(AppSpacing.spacing4)
                 .background(
                     RoundedRectangle(cornerRadius: AppCornerRadius.extraLarge)
-                        .fill(Color.white)
+                        .fill(AppColors.cardBackground)
                 )
                 .overlay(
                     RoundedRectangle(cornerRadius: AppCornerRadius.extraLarge)
@@ -227,26 +225,20 @@ struct AddRecordView: View {
                 .scrollContentBackground(.hidden)
         }
     }
-    
-    private func saveBill() {
-        guard let amountVal = Double(amount),
-              let category = selectedCategory else { return }
-        
-        let bill = Bill(
-            amount: amountVal,
-            type: billType,
-            categoryName: category.name,
-            categoryIcon: category.icon,
-            categoryColorHex: category.colorHex,
-            note: note.isEmpty ? nil : note,
-            date: date
-        )
-        
-        onSave(bill)
-        dismiss()
-    }
 }
 
 #Preview {
-    AddRecordView(ledger: nil) { _ in }
+    AddRecordView(
+        viewModel: AddRecordViewModel(
+            billService: BillService(billRepository: BillRepository(modelContext: {
+                let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                return container.mainContext
+            }())),
+            categoryRepository: CategoryRepository(modelContext: {
+                let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+                return container.mainContext
+            }())
+        ),
+        currentLedger: nil
+    )
 }

@@ -3,84 +3,99 @@ import SwiftData
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query private var ledgers: [Ledger]
+    @Query(sort: \Ledger.createdAt, order: .reverse) private var ledgers: [Ledger]
+
+    @State private var selectedTab: Int = 0
+    @State private var showingAddRecord: Bool = false
+
+    let ledgerService: LedgerService
+    let billService: BillService
+    let statisticsService: StatisticsService
 
     var body: some View {
-        TabView {
-            NavigationStack {
-                LedgerListView()
-            }
-            .tabItem {
-                Label("账本", systemImage: "book.fill")
-            }
-
-            StatisticsView()
-                .tabItem {
-                    Label("统计", systemImage: "chart.pie.fill")
+        ZStack(alignment: .bottom) {
+            // Tab Content
+            Group {
+                switch selectedTab {
+                case 0:
+                    NavigationStack {
+                        LedgerListView(
+                            viewModel: LedgerListViewModel(ledgerService: ledgerService)
+                        )
+                    }
+                case 1:
+                    StatisticsView(
+                        viewModel: StatisticsViewModel(
+                            billService: billService,
+                            statisticsService: statisticsService
+                        ),
+                        ledgers: ledgers,
+                        billService: billService,
+                        statisticsService: statisticsService
+                    )
+                case 2:
+                    SettingsView(
+                        viewModel: SettingsViewModel(
+                            ledgerRepository: LedgerRepository(modelContext: modelContext)
+                        ),
+                        ledgers: ledgers,
+                        ledgerService: ledgerService,
+                        billService: billService,
+                        statisticsService: statisticsService
+                    )
+                default:
+                    EmptyView()
                 }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .padding(.bottom, 80)
 
-            SettingsView()
-                .tabItem {
-                    Label("设置", systemImage: "gearshape.fill")
-                }
+            // Custom Bottom Nav Bar
+            VStack(spacing: 0) {
+                Spacer()
+                BottomNavBar(
+                    selectedTab: $selectedTab,
+                    onAddTap: { showingAddRecord = true }
+                )
+            }
+            .ignoresSafeArea(.keyboard)
         }
-        .onAppear {
-            initializeDefaultLedgerIfNeeded()
-        }
-    }
-
-    private func initializeDefaultLedgerIfNeeded() {
-        if ledgers.isEmpty {
-            let defaultLedger = Ledger(
-                name: "默认账本",
-                icon: "book.fill",
-                colorHex: "#007AFF"
+        .sheet(isPresented: $showingAddRecord) {
+            AddRecordView(
+                viewModel: AddRecordViewModel(
+                    billService: billService,
+                    categoryRepository: CategoryRepository(modelContext: modelContext)
+                ),
+                currentLedger: currentLedger
             )
-            defaultLedger.categories = createDefaultCategories()
-            modelContext.insert(defaultLedger)
-
-            UserDefaults.standard.set(defaultLedger.id.uuidString, forKey: "lastSelectedLedgerId")
-
-            try? modelContext.save()
         }
+        .ignoresSafeArea(.keyboard)
     }
 
-    private func createDefaultCategories() -> [Category] {
-        let expenseCategories = [
-            ("餐饮", "fork.knife", "#FF6B6B"),
-            ("交通", "car.fill", "#4ECDC4"),
-            ("购物", "bag.fill", "#45B7D1"),
-            ("娱乐", "gamecontroller.fill", "#96CEB4"),
-            ("居住", "house.fill", "#FFEAA7"),
-            ("医疗", "cross.fill", "#DDA0DD"),
-            ("通讯", "phone.fill", "#98D8C8"),
-            ("其他", "ellipsis.circle.fill", "#B8B8B8")
-        ]
-
-        let incomeCategories = [
-            ("工资", "banknote.fill", "#2ECC71"),
-            ("奖金", "gift.fill", "#27AE60"),
-            ("投资收益", "chart.line.uptrend.xyaxis", "#3498DB"),
-            ("其他收入", "plus.circle.fill", "#9B59B6")
-        ]
-
-        var categories: [Category] = []
-
-        for (name, icon, color) in expenseCategories {
-            let category = Category(name: name, icon: icon, colorHex: color, type: .expense)
-            categories.append(category)
+    private var currentLedger: Ledger? {
+        if let lastSelectedId = UserDefaults.standard.string(forKey: AppConstants.lastSelectedLedgerIdKey),
+           let uuid = UUID(uuidString: lastSelectedId) {
+            return ledgers.first { $0.id == uuid }
         }
-
-        for (name, icon, color) in incomeCategories {
-            let category = Category(name: name, icon: icon, colorHex: color, type: .income)
-            categories.append(category)
-        }
-
-        return categories
+        return ledgers.first
     }
 }
 
 #Preview {
-    ContentView()
-        .modelContainer(for: [Ledger.self, Bill.self, Category.self], inMemory: true)
+    ContentView(
+        ledgerService: {
+            let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            let ctx = container.mainContext
+            let ledgerRepo = LedgerRepository(modelContext: ctx)
+            let categoryRepo = CategoryRepository(modelContext: ctx)
+            return LedgerService(ledgerRepository: ledgerRepo, categoryRepository: categoryRepo)
+        }(),
+        billService: {
+            let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+            let ctx = container.mainContext
+            return BillService(billRepository: BillRepository(modelContext: ctx))
+        }(),
+        statisticsService: StatisticsService()
+    )
+    .modelContainer(for: [Ledger.self, Bill.self, Category.self], inMemory: true)
 }

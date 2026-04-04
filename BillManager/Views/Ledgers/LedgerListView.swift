@@ -3,10 +3,8 @@ import SwiftData
 
 struct LedgerListView: View {
     @Environment(\.modelContext) private var modelContext
-    @Query(sort: \Ledger.createdAt, order: .reverse) private var ledgers: [Ledger]
-    @Query private var allBills: [Bill]
 
-    @State private var selectedLedger: Ledger?
+    @State var viewModel: LedgerListViewModel
     @State private var showingLedgerEditor = false
     @State private var editingLedger: Ledger?
     @State private var showingDeleteAlert = false
@@ -24,29 +22,35 @@ struct LedgerListView: View {
                 }
             )
 
-            ScrollView {
-                VStack(spacing: 20) {
-                    ForEach(ledgers) { ledger in
-                        if !ledger.isArchived {
+            if viewModel.isLoading {
+                Spacer()
+                ProgressView()
+                Spacer()
+            } else {
+                ScrollView {
+                    VStack(spacing: 20) {
+                        ForEach(viewModel.activeLedgers) { ledger in
                             NavigationLink(value: ledger) {
                                 LedgerCardView(
                                     ledger: ledger,
                                     onEdit: { editingLedger = ledger },
-                                    onArchive: { archiveLedger(ledger) },
+                                    onArchive: {
+                                        Task { await viewModel.archiveLedger(ledger) }
+                                    },
                                     onDelete: { confirmDelete(ledger) }
                                 )
                             }
                             .buttonStyle(.plain)
                         }
-                    }
 
-                    if !ledgers.filter({ $0.isArchived }).isEmpty {
-                        archivedSection
-                    }
+                        if !viewModel.archivedLedgers.isEmpty {
+                            archivedSection
+                        }
 
-                    addLedgerButton
+                        addLedgerButton
+                    }
+                    .padding()
                 }
-                .padding()
             }
         }
         .background(AppColors.background)
@@ -55,21 +59,28 @@ struct LedgerListView: View {
         }
         .sheet(isPresented: $showingLedgerEditor) {
             LedgerEditorView(ledger: editingLedger) { name, icon, colorHex in
-                saveLedger(name: name, icon: icon, colorHex: colorHex)
+                if let ledger = editingLedger {
+                    Task { await viewModel.updateLedger(ledger, name: name, icon: icon, colorHex: colorHex) }
+                } else {
+                    Task { await viewModel.createLedger(name: name, icon: icon, colorHex: colorHex) }
+                }
             }
         }
         .alert("确认删除", isPresented: $showingDeleteAlert) {
             Button("取消", role: .cancel) {}
             Button("删除", role: .destructive) {
                 if let ledger = ledgerToDelete {
-                    deleteLedger(ledger)
+                    Task { await viewModel.deleteLedger(ledger) }
                 }
             }
         } message: {
             Text("删除账本将同时删除所有相关账单，此操作不可恢复。")
         }
+        .task {
+            await viewModel.loadLedgers()
+        }
     }
-    
+
     private var archivedSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -78,13 +89,13 @@ struct LedgerListView: View {
                 Text("已归档账本")
                     .font(.system(size: 14, weight: .semibold))
             }
-            .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+            .foregroundColor(AppColors.textTertiary)
             .padding(.top, 8)
-            
-            ForEach(ledgers.filter { $0.isArchived }) { ledger in
+
+            ForEach(viewModel.archivedLedgers) { ledger in
                 ArchivedLedgerRow(
                     ledger: ledger,
-                    onRestore: { restoreLedger(ledger) },
+                    onRestore: { Task { await viewModel.restoreLedger(ledger) } },
                     onDelete: { confirmDelete(ledger) }
                 )
             }
@@ -102,81 +113,23 @@ struct LedgerListView: View {
                 Text("新建账本")
                     .font(.system(size: 16, weight: .semibold))
             }
-            .foregroundColor(Color(red: 245/255, green: 158/255, blue: 11/255))
+            .foregroundColor(AppColors.primary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 16)
             .background(
                 RoundedRectangle(cornerRadius: 40)
-                    .strokeBorder(Color(red: 245/255, green: 158/255, blue: 11/255).opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [8]))
+                    .strokeBorder(AppColors.primary.opacity(0.5), style: StrokeStyle(lineWidth: 2, dash: [8]))
             )
         }
-    }
-
-    private func saveLedger(name: String, icon: String, colorHex: String) {
-        if let ledger = editingLedger {
-            ledger.name = name
-            ledger.icon = icon
-            ledger.colorHex = colorHex
-        } else {
-            let newLedger = Ledger(name: name, icon: icon, colorHex: colorHex)
-            newLedger.categories = createDefaultCategories()
-            modelContext.insert(newLedger)
-        }
-        try? modelContext.save()
-    }
-
-    private func archiveLedger(_ ledger: Ledger) {
-        ledger.isArchived = true
-        try? modelContext.save()
-    }
-
-    private func restoreLedger(_ ledger: Ledger) {
-        ledger.isArchived = false
-        try? modelContext.save()
     }
 
     private func confirmDelete(_ ledger: Ledger) {
         ledgerToDelete = ledger
         showingDeleteAlert = true
     }
-
-    private func deleteLedger(_ ledger: Ledger) {
-        modelContext.delete(ledger)
-        try? modelContext.save()
-    }
-
-    private func createDefaultCategories() -> [Category] {
-        let expenseData = [
-            ("餐饮", "fork.knife", "#FF6B6B"),
-            ("交通", "car.fill", "#4ECDC4"),
-            ("购物", "bag.fill", "#45B7D1"),
-            ("娱乐", "gamecontroller.fill", "#96CEB4"),
-            ("居住", "house.fill", "#FFEAA7"),
-            ("医疗", "cross.fill", "#DDA0DD"),
-            ("通讯", "phone.fill", "#98D8C8"),
-            ("其他", "ellipsis.circle.fill", "#B8B8B8")
-        ]
-
-        let incomeData = [
-            ("工资", "banknote.fill", "#2ECC71"),
-            ("奖金", "gift.fill", "#27AE60"),
-            ("投资收益", "chart.line.uptrend.xyaxis", "#3498DB"),
-            ("其他收入", "plus.circle.fill", "#9B59B6")
-        ]
-
-        var categories: [Category] = []
-
-        for (name, icon, color) in expenseData {
-            categories.append(Category(name: name, icon: icon, colorHex: color, type: .expense))
-        }
-
-        for (name, icon, color) in incomeData {
-            categories.append(Category(name: name, icon: icon, colorHex: color, type: .income))
-        }
-
-        return categories
-    }
 }
+
+// MARK: - LedgerCardView
 
 struct LedgerCardView: View {
     let ledger: Ledger
@@ -185,7 +138,7 @@ struct LedgerCardView: View {
     let onDelete: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 20) {
+        VStack(alignment: .leading, spacing: AppSpacing.spacing5) {
             HStack {
                 ZStack {
                     Circle()
@@ -198,11 +151,11 @@ struct LedgerCardView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(ledger.name)
-                        .font(.system(size: 18, weight: .semibold))
-                        .foregroundColor(Color(red: 28/255, green: 25/255, blue: 23/255))
+                        .font(AppTypography.h3)
+                        .foregroundColor(AppColors.textPrimary)
                     Text("\(ledger.bills?.count ?? 0) 笔账单")
-                        .font(.system(size: 12))
-                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                        .font(AppTypography.caption)
+                        .foregroundColor(AppColors.textTertiary)
                 }
 
                 Spacer()
@@ -221,7 +174,7 @@ struct LedgerCardView: View {
                 } label: {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 18))
-                        .foregroundColor(Color(red: 120/255, green: 113/255, blue: 108/255))
+                        .foregroundColor(AppColors.textSecondary)
                         .frame(width: 44, height: 44)
                 }
             }
@@ -231,42 +184,48 @@ struct LedgerCardView: View {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("收入")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                        .font(AppTypography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppColors.textTertiary)
                     Text(ledger.totalIncome.currencyFormatted)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(red: 16/255, green: 185/255, blue: 129/255))
+                        .font(AppTypography.amountSmall)
+                        .foregroundColor(AppColors.income)
                 }
 
                 Spacer()
 
                 VStack(alignment: .center, spacing: 4) {
                     Text("支出")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                        .font(AppTypography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppColors.textTertiary)
                     Text(ledger.totalExpense.currencyFormatted)
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(Color(red: 244/255, green: 63/255, blue: 94/255))
+                        .font(AppTypography.amountSmall)
+                        .foregroundColor(AppColors.expense)
                 }
 
                 Spacer()
 
                 VStack(alignment: .trailing, spacing: 4) {
                     Text("结余")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(Color(red: 168/255, green: 162/255, blue: 158/255))
+                        .font(AppTypography.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(AppColors.textTertiary)
                     Text(ledger.balance.currencyFormatted)
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundColor(ledger.balance >= 0 ? Color(red: 28/255, green: 25/255, blue: 23/255) : Color(red: 244/255, green: 63/255, blue: 94/255))
+                        .font(AppTypography.amountSmall)
+                        .fontWeight(.bold)
+                        .foregroundColor(ledger.balance >= 0 ? AppColors.textPrimary : AppColors.expense)
                 }
             }
         }
-        .padding(24)
-        .background(Color.white)
-        .cornerRadius(40)
-        .shadow(color: Color.black.opacity(0.04), radius: 8, x: 0, y: 4)
+        .padding(AppSpacing.spacing6)
+        .background(AppColors.cardBackground)
+        .cornerRadius(AppCornerRadius.extraLarge)
+        .shadowLight()
     }
 }
+
+// MARK: - ArchivedLedgerRow
 
 struct ArchivedLedgerRow: View {
     let ledger: Ledger
@@ -279,7 +238,7 @@ struct ArchivedLedgerRow: View {
                 .foregroundColor(Color(hex: ledger.colorHex))
 
             Text(ledger.name)
-                .foregroundColor(.secondary)
+                .foregroundColor(AppColors.textSecondary)
 
             Spacer()
 
@@ -293,10 +252,12 @@ struct ArchivedLedgerRow: View {
         .padding()
         .background(
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color(.secondarySystemBackground))
+                .fill(AppColors.backgroundAlt)
         )
     }
 }
+
+// MARK: - LedgerEditorView
 
 struct LedgerEditorView: View {
     @Environment(\.dismiss) private var dismiss
@@ -344,9 +305,9 @@ struct LedgerEditorView: View {
                                     .frame(width: 50, height: 50)
                                     .background(
                                         Circle()
-                                            .fill(selectedIcon == icon ? Color.accentColor.opacity(0.2) : Color.gray.opacity(0.1))
+                                            .fill(selectedIcon == icon ? AppColors.primary.opacity(0.2) : Color.gray.opacity(0.1))
                                     )
-                                    .foregroundColor(selectedIcon == icon ? .accentColor : .primary)
+                                    .foregroundColor(selectedIcon == icon ? AppColors.primary : AppColors.textPrimary)
                             }
                             .buttonStyle(.plain)
                         }
@@ -364,7 +325,7 @@ struct LedgerEditorView: View {
                                     .frame(width: 44, height: 44)
                                     .overlay(
                                         Circle()
-                                            .strokeBorder(selectedColor == color ? Color.primary : Color.clear, lineWidth: 3)
+                                            .strokeBorder(selectedColor == color ? AppColors.textPrimary : Color.clear, lineWidth: 3)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -410,6 +371,13 @@ struct LedgerEditorView: View {
 }
 
 #Preview {
-    LedgerListView()
-        .modelContainer(for: [Ledger.self, Bill.self, Category.self], inMemory: true)
+    let container = try! ModelContainer(for: Ledger.self, Bill.self, Category.self, configurations: ModelConfiguration(isStoredInMemoryOnly: true))
+    let ctx = container.mainContext
+    let ledgerRepo = LedgerRepository(modelContext: ctx)
+    let categoryRepo = CategoryRepository(modelContext: ctx)
+    let ledgerService = LedgerService(ledgerRepository: ledgerRepo, categoryRepository: categoryRepo)
+    return NavigationStack {
+        LedgerListView(viewModel: LedgerListViewModel(ledgerService: ledgerService))
+    }
+    .modelContainer(container)
 }
